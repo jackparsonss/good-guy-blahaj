@@ -3,6 +3,9 @@ import json
 import time
 import re
 
+##############################################
+# External inputs
+##############################################
 input_words = "I got some pairs of oranges for my pear."
 
 censor_words = [
@@ -10,6 +13,10 @@ censor_words = [
     "pears",
     "pear",
 ]
+
+##############################################
+# Request
+##############################################
 
 s_censor_words = "".join(f" - {word}\n" for word in censor_words)
 
@@ -37,7 +44,11 @@ start = time.time()
 response = rq.post('http://localhost:11434/api/generate', headers=headers, data=data)
 cease = time.time()
 
-#print(f"Took: {cease-start}s")
+print(f"Took: {cease-start}s")
+
+##############################################
+# Post-processing
+##############################################
 
 json_version = re.sub(r"\n(?=.)", ",", response.text)
 json_version = f"[{json_version}]"

@@ -5,6 +5,14 @@ import re
 
 input_words = "I got some pairs of oranges for my pear."
 
+censor_words = [
+    "oranges",
+    "pears",
+    "pear",
+]
+
+s_censor_words = "".join(f" - {word}\n" for word in censor_words)
+
 headers = {
     "Content-Type": "application/x-www-form-urlencoded",
 }
@@ -12,12 +20,11 @@ headers = {
 prompt = f"""
 Please replace all the words in the following list with "#BEEP#" in the text at the bottom. You are not allowed to output any additional explanation. Be direct to the point. Only output the censored sentence, nothing more. You cannot add any notes after!
 
- - oranges
- - pears
- - pear
-
+{s_censor_words}
 {input_words}
 """
+
+print(prompt)
 
 data = {
     "model": "mistral:instruct",

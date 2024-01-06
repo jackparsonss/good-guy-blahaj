@@ -11,7 +11,7 @@ inflect = inflect.engine()
 ##############################################
 # External inputs
 ##############################################
-input_words = "I got some pairs of oranges for my pear. Go jump off a cliff! You beast."
+input_words = "I got some pairs of orange oranges for my pear. Go jump off a cliff! You beast."
 processed_words = str(input_words)
 
 censor_words = [
@@ -38,6 +38,9 @@ for word in censor_words:
 
 for word in censor_words2:
     processed_words = re.sub(fr"\b{word}\b", "#BEEP#", processed_words, flags=re.IGNORECASE)
+
+# Remove consecutive beeps
+processed_words = re.sub("(\s*#BEEP#\s*)+", " #BEEP# ", processed_words)
 
 ##############################################
 # Request

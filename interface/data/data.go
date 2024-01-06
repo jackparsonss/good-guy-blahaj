@@ -76,7 +76,6 @@ func fetchData() string {
 
 	var d []InputData
 	b := string(body)
-	fmt.Println("Body: ", b)
 
 	regex, err := regexp.Compile(`\n`)
 	if err != nil {

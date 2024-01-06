@@ -55,20 +55,23 @@ func fetchData() string {
 
 	req, err := http.NewRequest("POST", URL, bytes.NewBuffer(payload))
 	if err != nil {
-		log.Fatalf("Failed to query model: %v", err)
+		log.Printf("Failed to create request: %v", err)
+		return WORDS
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error making request: %v", err)
+		log.Printf("Error making request: %v", err)
+		return WORDS
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading response body: %v", err)
+		log.Printf("Error reading response body: %v", err)
+		return WORDS
 	}
 
 	var d []InputData
@@ -77,14 +80,16 @@ func fetchData() string {
 
 	regex, err := regexp.Compile(`\n`)
 	if err != nil {
-		log.Fatalf("Failed to compile regex: %v", err)
+		log.Printf("Failed to compile regex: %v", err)
+		return WORDS
 	}
 	b = regex.ReplaceAllString(b, ",")
 	b = "[" + b[:len(b)-1] + "]"
 
 	err = json.Unmarshal([]byte(b), &d)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal json")
+		log.Printf("Failed to unmarshal json")
+		return WORDS
 	}
 
 	s := ""

@@ -28,7 +28,5 @@ while True:
     if not data_queue.empty():
         while not data_queue.empty():
             data = data_queue.get()
-            text = recognizer.recognize_whisper(data, model="medium.en")
+            text = recognizer.recognize_whisper(data, model="tiny.en")
             print(text)
-    
-    

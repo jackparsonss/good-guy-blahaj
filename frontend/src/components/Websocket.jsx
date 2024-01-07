@@ -15,13 +15,14 @@ const Websocket = () => {
     })
 
     // Listen for messages
-    let m = ""
-    let o = ""
     socket.addEventListener("message", (event) => {
+      console.log("Got message: ", event.data)
+      let m = ""
+      let o = ""
       const data = JSON.parse(event.data)
       data.forEach(el => {
-        m += el.modified_text + " "
-        o += el.original_text + " "
+        m += el.is_censored ? "#BLEEP# " : el.original + " "
+        o += el.original + " "
       })
 
       setModified(m)

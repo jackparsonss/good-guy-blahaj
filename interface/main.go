@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -11,6 +12,13 @@ import (
 )
 
 var upgrader = websocket.Upgrader{}
+
+const orca string = "orca.mami2.moe:9032"
+
+type Data struct {
+	Original   string `json:"original"`
+	IsCensored bool   `json:"is_censored"`
+}
 
 func DataHandler(c echo.Context) error {
 	data := data.GetData()
@@ -22,21 +30,58 @@ func WSHandler(c echo.Context) error {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
+		c.Logger().Error(err)
 		return err
 	}
 	defer ws.Close()
 
+	connection, err := net.Dial("tcp", orca)
+	if err != nil {
+		c.Logger().Error(err)
+	}
+	defer connection.Close()
+
 	for {
-		// Write
-		data := data.GetData()
-		d, err := json.Marshal(data)
+		_, err = connection.Write([]byte("gimme"))
 		if err != nil {
 			c.Logger().Error(err)
+			return err
 		}
 
-		err = ws.WriteMessage(websocket.TextMessage, d)
+		buffer := make([]byte, 1024)
+		mLen, err := connection.Read(buffer)
 		if err != nil {
 			c.Logger().Error(err)
+			return err
+		}
+
+		var data []data.Data
+		err = json.Unmarshal(buffer[:mLen], &data)
+		if err != nil {
+			c.Logger().Error(err)
+			return err
+		}
+
+		var d []Data
+		for _, w := range data {
+			e := Data{
+				IsCensored: w.IsCensored,
+				Original:   w.Original,
+			}
+
+			d = append(d, e)
+		}
+
+		output, err := json.Marshal(d)
+		if err != nil {
+			c.Logger().Error(err)
+			return err
+		}
+
+		err = ws.WriteMessage(websocket.TextMessage, output)
+		if err != nil {
+			c.Logger().Error(err)
+			return err
 		}
 	}
 }

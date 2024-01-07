@@ -16,24 +16,23 @@ const (
 	WORDS string = "I got some pairs of oranges for my pear."
 )
 
-type InputData struct {
-	Response string `json:"response"`
+type Data struct {
+	Original   string `json:"original"`
+	IsCensored bool   `json:"is_censored"`
 }
 
-type OutputData struct {
-	OriginalText string `json:"original_text"`
-	ModifiedText string `json:"modified_text"`
-}
-
-func GetData() []OutputData {
+func GetData() []Data {
 	data := strings.Split(fetchData(), " ")
 	original := strings.Split(WORDS, " ")
 
-	var d []OutputData
+	fmt.Println("DATA: ", data)
+	fmt.Println("ORIGINAL: ", original)
+
+	var d []Data
 	for i, w := range original {
-		e := OutputData{
-			OriginalText: w,
-			ModifiedText: data[i],
+		e := Data{
+			Original:   w,
+			IsCensored: data[i] == "#BLEEP#",
 		}
 
 		d = append(d, e)
@@ -74,7 +73,7 @@ func fetchData() string {
 		return WORDS
 	}
 
-	var d []InputData
+	var d []Data
 	b := string(body)
 
 	regex, err := regexp.Compile(`\n`)
@@ -93,7 +92,11 @@ func fetchData() string {
 
 	s := ""
 	for _, v := range d {
-		s += v.Response
+		if v.IsCensored {
+			s += "#BLEEP#"
+		} else {
+			s += v.Original
+		}
 	}
 
 	return strings.TrimSpace(s)

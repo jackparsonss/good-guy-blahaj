@@ -108,6 +108,18 @@ def unflatten(list_, lengths):
     return ret
 
 
+def annotated_to_string(words_annote):
+    s = list()
+
+    for word in words_annote:
+        if word[1]:
+            s.append(word[0])
+        else:
+            s.append("#BEEP#")
+
+    return " ".join(s)
+
+
 def get_word_starts(words):
     words_index = list()
 
@@ -154,9 +166,9 @@ def sequence_match(lhs, rhs, word_starts, word_run_idx):
             j += 1
             n -= 1
 
-        for x in range(n-2):
+        for x in range(n):
             x += i
-            print(x, len(word_run_idx), word_starts)
+            print(x, len(word_run_idx), lhs[i:i+n], rhs[j:j+n], word_starts)
             index = word_run_idx[x]
 
             if index != -1:
@@ -165,14 +177,14 @@ def sequence_match(lhs, rhs, word_starts, word_run_idx):
     return word_starts
 
 
-def censor_audio(audio, beep_wav, word_spans, word_starts, ratio, sample_rate):
+def censor_audio(audio, beep_wav, word_spans, word_annotes, ratio, sample_rate):
     prev_rm_word_idx = -1
     audio_buffer = audio[:0]
 
     new_audio = audio[:]
 
-    for i in range(len(word_starts)):
-        if not word_starts[i][2]:  # Don't include this word
+    for i in range(len(word_annotes)):
+        if not word_annotes[i][1]:  # Don't include this word
             start = 1000 * int(word_spans[i][0].start * ratio) / sample_rate
             cease = 1000 * int(word_spans[i][-1].end * ratio) / sample_rate
 
@@ -210,7 +222,7 @@ testing_audio = None
 ##########################
 # Startup Constants
 ##########################
-model = whisper.load_model("base.en").to("cuda")
+model = whisper.load_model("medium.en").to("cuda")
 inflect = inflect.engine()
 beep_sound = AudioSegment.from_wav("beep1.wav")
 
@@ -248,31 +260,38 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
                 audio_np = np.frombuffer(og_audio, dtype=np.int16).astype(np.float32) / 32768.0
                 results = model.transcribe(audio_np, fp16=True)
-                og_transcribed_text = results["text"]
-                processed_words = str(og_transcribed_text)
+
+                og_transcribed_text = results["text"].strip().lower()
+                og_transcribed_text = re.sub("[^a-z ]", "", og_transcribed_text)
+                og_transcribed_text = " ".join(og_transcribed_text.split())
 
                 ##########################
                 # Regex Filtering
                 ##########################
-                for word in censor_words:
-                    processed_words = re.sub(
-                        rf"\b{word}\b", "#BEEP#", processed_words, flags=re.IGNORECASE
-                    )
+                words_annote = [[word, True] for word in og_transcribed_text.split()]
 
-                processed_words = re.sub("(\s*#BEEP#\s*)+", " #BEEP# ", processed_words)
+                for i in range(len(words_annote)):
+                    for word in censor_words:
+                        if re.match(word, words_annote[i][0], flags=re.IGNORECASE):
+                            words_annote[i][1] = False
 
                 # Alignment (used for audio alignment later)
-                removed_words = re.sub("#BEEP#", "", processed_words)
-                word_starts = get_word_starts(removed_words)
-                word_run_idx = to_running_index(word_starts)
-                word_starts = sequence_match(og_transcribed_text, removed_words, word_starts, word_run_idx)
+                #removed_words = re.sub("#BEEP#", "", processed_words)
+                #word_starts = get_word_starts(og_transcribed_text)
+                #print(word_starts)
+                #word_run_idx = to_running_index(word_starts)
+                #print(word_run_idx)
+                #word_starts = sequence_match(og_transcribed_text, removed_words, word_starts, word_run_idx)
+                print(json.dumps(words_annote, indent=4))
+                print(annotated_to_string(words_annote))
+
 
                 ##########################
                 # Prompting
                 ##########################
                 data = {
                     "model": "openorca_hacked:v0.7",
-                    "prompt": processed_words,
+                    "prompt": og_transcribed_text,
                 }
                 data = json.dumps(data)
 
@@ -294,7 +313,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 print("==== INPUT =============")
                 print(og_transcribed_text)
                 print("==== REGEX =============")
-                print(processed_words)
+                print(annotated_to_string(words_annote))
                 print("==== LLAMA =============")
                 print(response.decode('utf-8'))
                 print("========================")
@@ -303,19 +322,18 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 # Chop up
                 ##########################
                 waveform, _ = torchaudio.load(io.BytesIO(og_audio))
-                transcript = "shawty got them apple bottom jeans boots with the fur".split()
                 with torch.inference_mode():
                     emission, _ = align_model(waveform.to("cuda"))
 
-                tokenized_transcript = [DICTIONARY[c] for word in transcript for c in word]
+                tokenized_transcript = [DICTIONARY[c] for word in og_transcribed_text.split() for c in word]
                 aligned_tokens, alignment_scores = align(emission, tokenized_transcript)
                 token_spans = F.merge_tokens(aligned_tokens, alignment_scores)
-                word_spans = unflatten(token_spans, [len(word) for word in transcript])
+                word_spans = unflatten(token_spans, [len(word) for word in og_transcribed_text.split()])
 
                 ratio = waveform.size(1) / emission.size(1)
                 audio = AudioSegment.from_wav(io.BytesIO(og_audio))
 
-                new_audio = censor_audio(audio, beep_sound, word_spans, word_starts, ratio, bundle.sample_rate)
+                new_audio = censor_audio(audio, beep_sound, word_spans, words_annote, ratio, bundle.sample_rate)
                 if testing_audio is None:
                     testing_audio = new_audio
                 else:

@@ -14,17 +14,4 @@ export type SiteConfig = {
 	};
 };
 
-export type Author = {
-	type: string;
-	name: string;
-	photo: string;
-	url: string;
-};
-
-export type Content = {
-	"content-type": string;
-	value: string;
-	html: string;
-	text: string;
-};
 

@@ -19,6 +19,7 @@ func DataHandler(c echo.Context) error {
 }
 
 func WSHandler(c echo.Context) error {
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err

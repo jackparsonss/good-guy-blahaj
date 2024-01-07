@@ -120,63 +120,6 @@ def annotated_to_string(words_annote):
     return " ".join(s)
 
 
-def get_word_starts(words):
-    words_index = list()
-
-    running_sum = 0
-    for word in words.split():
-        words_index.append([running_sum, word, False])
-        running_sum += len(word) + 1
-
-    return words_index
-
-
-def to_running_index(words_index):
-    running_index = [-1 for _ in range(words_index[-1][0] + len(words_index[-1][1]))]
-
-    for i in range(len(running_index)):
-        for ii, word in enumerate(words_index):
-            start = word[0]
-            cease = word[0] + len(word[1]) - 1
-
-            if start <= i <= cease:
-                running_index[i] = ii
-
-    return running_index
-
-def word_starts_to_string(word_starts):
-    s = list()
-
-    for word in word_starts:
-        if word[2]:
-            s.append(word[1])
-        else:
-            s.append("#BEEP#")
-
-    return " ".join(s)
-
-def sequence_match(lhs, rhs, word_starts, word_run_idx):
-    matcher = difflib.SequenceMatcher(None, lhs, rhs)
-
-    for x in matcher.get_matching_blocks()[:-1]:
-        i, j, n = x
-
-        while lhs[i] == " ":
-            i += 1
-            j += 1
-            n -= 1
-
-        for x in range(n):
-            x += i
-            print(x, len(word_run_idx), lhs[i:i+n], rhs[j:j+n], word_starts)
-            index = word_run_idx[x]
-
-            if index != -1:
-                word_starts[index][2] = True
-
-    return word_starts
-
-
 def censor_audio(audio, beep_wav, word_spans, word_annotes, ratio, sample_rate):
     prev_rm_word_idx = -1
     audio_buffer = audio[:0]
@@ -272,19 +215,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
                 for i in range(len(words_annote)):
                     for word in censor_words:
-                        if re.match(word, words_annote[i][0], flags=re.IGNORECASE):
+                        if re.fullmatch(f"^{word}$", words_annote[i][0], flags=re.IGNORECASE):
                             words_annote[i][1] = False
-
-                # Alignment (used for audio alignment later)
-                #removed_words = re.sub("#BEEP#", "", processed_words)
-                #word_starts = get_word_starts(og_transcribed_text)
-                #print(word_starts)
-                #word_run_idx = to_running_index(word_starts)
-                #print(word_run_idx)
-                #word_starts = sequence_match(og_transcribed_text, removed_words, word_starts, word_run_idx)
-                print(json.dumps(words_annote, indent=4))
-                print(annotated_to_string(words_annote))
-
 
                 ##########################
                 # Prompting
@@ -334,6 +266,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 audio = AudioSegment.from_wav(io.BytesIO(og_audio))
 
                 new_audio = censor_audio(audio, beep_sound, word_spans, words_annote, ratio, bundle.sample_rate)
+
                 if testing_audio is None:
                     testing_audio = new_audio
                 else:
@@ -342,9 +275,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 ##########################
                 # Respond
                 ##########################
+                wav_bytearray = io.BytesIO()
+                new_audio.export(wav_bytearray, format="wav")
+                new_audio = wav_bytearray.getvalue()
+
                 msg = (
-                    struct.pack('>I', len(og_audio))
-                    + og_audio
+                    struct.pack('>I', len(new_audio))
+                    + new_audio
                 )
 
                 conn.sendall(msg)

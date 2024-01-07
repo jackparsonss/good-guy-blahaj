@@ -75,7 +75,7 @@ playthread.start()
 try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         HOST = "orca.mami2.moe"
-        PORT = 9031
+        PORT = 9032
         s.connect((HOST, PORT))
         
         def listen_callback(_, audio: sr.AudioData):
@@ -86,7 +86,7 @@ try:
             
         # spin, listening to messages.
         print("Starting!")
-        die_func = recognizer.listen_in_background(source=source, phrase_time_limit=1.0, callback=listen_callback)
+        die_func = recognizer.listen_in_background(source=source, phrase_time_limit=4.0, callback=listen_callback)
         
         # don't worry about it, this is bad (makes the listen thread not die, but should be done by joining later or something...)
         while True:

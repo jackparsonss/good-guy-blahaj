@@ -5,6 +5,7 @@ const Websocket = () => {
   const connection = useRef(null);
   const [modified, setModified] = useState("");
   const [original, setOriginal] = useState("");
+  const [isCensored, setIsCensored] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080/ws");
@@ -25,8 +26,8 @@ const Websocket = () => {
         o += el.original + " "
       })
 
-      setModified(m)
-      setOriginal(o)
+      setModified(m.trimEnd() + ".")
+      setOriginal(o.trimEnd() + ".")
     })
 
     connection.current = socket;
@@ -34,19 +35,26 @@ const Websocket = () => {
     return () => connection.close();
   }, []);
 
+  const toggleSwitch = () => {
+    setIsCensored(!isCensored);
+  };
+
   return (
     <div>
-        <div className="text-lg text-white">
-          <TypeWriter text={modified} delay={50} />
+      <div className="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer" onClick={toggleSwitch}>
+      <div
+        className={`absolute w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+          isCensored ? 'translate-x-full' : 'translate-x-0'
+        }`}
+      />
       </div>
-
-      <div className="text-lg text-gray-400">
-          <TypeWriter text={original} delay={50} />
-        <p className="inline text-red-300"></p>
+        <div>Censor</div>
+      <div className="text-lg text-white">
+        {isCensored && <TypeWriter text={modified} delay={50} />}
+        {!isCensored && <TypeWriter text={original} delay={50} />}
       </div>
     </div>
   )
-
 };
 
 export default Websocket;

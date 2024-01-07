@@ -8,6 +8,8 @@ import torchaudio
 import torchaudio.functional as F
 import io 
 import wave
+import pydub
+from pydub import AudioSegment
 
 def align(emission, tokens):
     targets = torch.tensor([tokens], dtype=torch.int32, device="cuda")
@@ -35,28 +37,44 @@ with torch.inference_mode():
 
 LABELS = bundle.get_labels(star=None)
 DICTIONARY = bundle.get_dict(star=None)
+for k, v in DICTIONARY.items():
+    print(f"{k}: {v}")
 
 tokenized_transcript = [DICTIONARY[c] for word in transcript for c in word]
 aligned_tokens, alignment_scores = align(emission, tokenized_transcript)
 
 token_spans = F.merge_tokens(aligned_tokens, alignment_scores)
 word_spans = unflatten(token_spans, [len(word) for word in transcript])
-
-#mute the 5th word which is "bottom"
-bit_rate = 256000
-
-start_timestamp = word_spans[4][0].start/100
-end_timestamp = word_spans[4][-1].end/100
-
-start_offset = int(start_timestamp * bit_rate)
-end_offset = int(end_timestamp * bit_rate)
-print(start_offset, end_offset)
-
-with wave.open("test_audio_16khz.wav", "rb") as wav_file:
-    num_frames = wav_file.getnframes()
-    audio_data = wav_file.readframes(num_frames)
-
-bytearray_data = bytearray(audio_data)
+print(word_spans[0])
 
 
+
+ratio = waveform.size(1)/emission.size(1)
+
+audio = AudioSegment.from_wav("test_audio_16khz.wav")
+for i in range(len(word_spans)):
+    start_timestamp = 1000 * int(word_spans[i][0].start * ratio) / bundle.sample_rate
+    end_timestamp = 1000 * int(word_spans[i][-1].end * ratio) / bundle.sample_rate
+    print(start_timestamp, end_timestamp)
+    new_audio = audio[start_timestamp:end_timestamp]
+    new_audio.export(f'out{i}.wav', format="wav")
+
+
+
+
+
+
+
+
+
+
+
+#muted_bytearray = bytearray_data[:start_offset] + b'\x00' * (end_offset - start_offset) + bytearray_data[end_offset:]
+
+# outfile = wave.open("out.wav", "w")
+# outfile.setnchannels(1)
+# outfile.setsampwidth(2)
+# outfile.setframerate(16000)
+# outfile.writeframes(muted_bytearray)
+# outfile.close()
 

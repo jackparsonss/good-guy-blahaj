@@ -35,20 +35,35 @@ def get_max(ranks):
     return max_words
 
 
+def encode_to_backed(max_words):
+    response = list()
+
+    for word in max_words.split():
+        response.append({ "original": word, "is_censored": False })
+
+    return json.dumps(response)
+
+
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind((HOST, PORT))
+    s.listen()
+
     while True:
         try:
-            s.bind((HOST, PORT))
-            s.listen()
             conn, addr = s.accept()
-
             print(f"Connected by {addr}")
 
             while True:
-                data = conn.recv(1024)
+                data = conn.recv(32768).decode('utf-8')
+
+                if data == "":
+                    break
+
+                print(f"Data: `{data}`")
+
                 data = {
                     "model": "openorca_hacked:v0.4",
-                    "prompt": data.decode('utf-8'),
+                    "prompt": data,
                 }
                 data = json.dumps(data)
 
@@ -62,8 +77,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         ranks[words] = 1
 
                 max_words = get_max(ranks)
-                conn.sendall(str.encode(max_words, 'utf-8'))
-
+                response = encode_to_backed(max_words)
+                conn.sendall(str.encode(response, 'utf-8'))
         except BrokenPipeError:
             continue
         finally:

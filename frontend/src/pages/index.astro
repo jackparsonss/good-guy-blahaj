@@ -1,0 +1,31 @@
+---
+import PageLayout from "@/layouts/Base";
+import TypeWriter from "../components/TypeWriter.jsx"
+
+const response = await fetch('http://localhost:8080');
+const data = await response.json();
+
+let modified = "";
+let original = "";
+
+data.forEach(el => {
+  modified += el.modified_text + " "
+  original += el.original_text + " "
+})
+---
+
+<PageLayout meta={{ title: "Home" }}>
+	<section>
+		<h1 class="title mb-6">good guy blahaj</h1>
+		<div class="mb-4 bg-gray-800 border-2 border-gray-700 shadow-md rounded-lg p-4">
+      <div class="text-lg text-white">
+          <TypeWriter client:only="react" text={modified} delay={50} />
+      </div>
+
+      <div class="text-lg text-gray-400">
+          <TypeWriter client:only="react" text={original} delay={50} />
+        <p class="inline text-red-300"></p>
+      </div>
+		</div>
+	</section>
+</PageLayout>

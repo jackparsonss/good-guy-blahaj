@@ -13,7 +13,7 @@ import (
 
 const (
 	URL   string = "http://localhost:11434/api/generate"
-	WORDS string = "I go some pairs of oranges for my pear."
+	WORDS string = "I got some pairs of oranges for my pear."
 )
 
 type InputData struct {

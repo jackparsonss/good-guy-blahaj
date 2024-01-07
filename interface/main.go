@@ -13,7 +13,7 @@ import (
 
 var upgrader = websocket.Upgrader{}
 
-const orca string = "orca.mami2.moe:9032"
+const orca string = "orca.mami2.moe:9033"
 
 type Data struct {
 	Original   string `json:"original"`
@@ -42,13 +42,13 @@ func WSHandler(c echo.Context) error {
 	defer connection.Close()
 
 	for {
-		_, err = connection.Write([]byte("gimme"))
+		_, err = connection.Write([]byte("i'm gonna push you off the cliff"))
 		if err != nil {
 			c.Logger().Error(err)
 			return err
 		}
 
-		buffer := make([]byte, 1024)
+		buffer := make([]byte, 32768)
 		mLen, err := connection.Read(buffer)
 		if err != nil {
 			c.Logger().Error(err)

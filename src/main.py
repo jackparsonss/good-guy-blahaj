@@ -51,34 +51,62 @@ headers = {
 }
 
 data = {
-    "model": "openorca_hacked:v0.1",
-    "prompt": padding_front + processed_words + padding_back,
+    "model": "openorca_hacked:v0.4",
+    "prompt": processed_words,
 }
 
 data = json.dumps(data)
 
 start = time.time()
-response = rq.post('http://localhost:11434/api/generate', headers=headers, data=data)
-cease = time.time()
 
-print(f"Took: {cease-start}s")
+for x in range(10):
+    response = rq.post('http://localhost:11434/api/generate', headers=headers, data=data)
+    cease = time.time()
 
-##############################################
-# Post-processing
-##############################################
-json_version = re.sub(r"\n(?=.)", ",", response.text)
-json_version = f"[{json_version}]"
-json_version = re.sub(f"\n", "", json_version)
+    print(f"Took: {cease - start}s")
 
-js = json.loads(json_version)
+    ##############################################
+    # Post-processing
+    ##############################################
+    json_version = re.sub(r"\n(?=.)", ",", response.text)
+    json_version = f"[{json_version}]"
+    json_version = re.sub(f"\n", "", json_version)
 
-words = "".join(word['response'] for word in js).strip()
-words = words[len(padding_front)+3:len(words)-len(padding_back)]
+    js = json.loads(json_version)
 
-print("==== INPUT ============")
-print(input_words)
-print("==== REGEX ============")
-print(processed_words)
-print("==== LLAMA ============")
-print(words)
-print("=======================")
+    words = "".join(word['response'] for word in js).strip()
+
+    print(x)
+    print("==== INPUT ============")
+    print(input_words)
+    print("==== REGEX ============")
+    print(processed_words)
+    print("==== LLAMA ============")
+    print(words)
+    print("=======================")
+
+
+# start = time.time()
+# response = rq.post('http://localhost:11434/api/generate', headers=headers, data=data)
+# cease = time.time()
+#
+# print(f"Took: {cease-start}s")
+#
+# ##############################################
+# # Post-processing
+# ##############################################
+# json_version = re.sub(r"\n(?=.)", ",", response.text)
+# json_version = f"[{json_version}]"
+# json_version = re.sub(f"\n", "", json_version)
+#
+# js = json.loads(json_version)
+#
+# words = "".join(word['response'] for word in js).strip()
+#
+# print("==== INPUT ============")
+# print(input_words)
+# print("==== REGEX ============")
+# print(processed_words)
+# print("==== LLAMA ============")
+# print(words)
+# print("=======================")

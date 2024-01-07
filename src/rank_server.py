@@ -126,7 +126,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 # Prompting
                 ##########################
                 data = {
-                    "model": "openorca_hacked:v0.4",
+                    "model": "openorca_hacked:v0.7",
                     "prompt": transcribed_text,
                 }
                 data = json.dumps(data)

@@ -10,11 +10,15 @@ import numpy as np
 import torch
 import whisper
 import struct
+import threading
 
 NUM_ROUNDS = 5
 
 HOST = "127.0.0.1"
-PORT = 9033
+PORT = 9032
+PORT_WEB = 9033
+
+WEB_RESPONSE = "[]".encode('utf-8')
 
 headers = { "Content-Type": "application/x-www-form-urlencoded" }
 
@@ -70,11 +74,34 @@ def recvall(sock, n):
     return data
 
 
+def web_backend_thread():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT_WEB))
+        s.listen()
+
+        while True:
+            try:
+                conn, addr = s.accept()
+
+                while True:
+                    data = conn.recv(1024)
+
+                    if not data:
+                        break
+                    conn.sendall(WEB_RESPONSE)
+            except BrokenPipeError:
+                continue
+            finally:
+                conn.close()
+
+
 ############################################################
 # Main
 ############################################################
 model = whisper.load_model("large").to("cuda")
 
+web_thread = threading.Thread(target=web_backend_thread)
+web_thread.start()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
@@ -86,16 +113,14 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(f"Connected by {addr}")
 
             while True:
-                data = recv_msg(conn)
+                og_audio = recv_msg(conn)
 
-                if len(data) == 0:
+                if not og_audio:
                     break
 
-                audio_np = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
+                audio_np = np.frombuffer(og_audio, dtype=np.int16).astype(np.float32) / 32768.0
                 results = model.transcribe(audio_np, fp16=True)
                 transcribed_text = results["text"]
-
-                og_audio = data
 
                 ##########################
                 # Prompting
@@ -119,11 +144,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 response = encode_to_backed(max_words)
                 response = response.encode('utf-8')
 
+                WEB_RESPONSE = response
+
+                print("==== INPUT =============")
+                print(transcribed_text)
+                print("==== LLAMA =============")
+                print(response.decode('utf-8'))
+                print("========================")
                 msg = (
-                    struct.pack('>I', len(data))
-                    + struct.pack('>I', len(response))
-                    + data
-                    + response
+                    struct.pack('>I', len(og_audio))
+                    + og_audio
                 )
 
                 conn.sendall(msg)

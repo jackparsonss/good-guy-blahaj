@@ -59,6 +59,18 @@ data = json.dumps(data)
 
 start = time.time()
 
+##############################################
+# Post-processing
+##############################################
+
+json_version = re.sub(r"\n(?=.)", ",", response.text)
+json_version = f"[{json_version}]"
+json_version = re.sub("\n", "", json_version)
+
+js = json.loads(json_version)
+
+words = "".join(word["response"] for word in js).strip()
+
 for x in range(10):
     response = rq.post('http://localhost:11434/api/generate', headers=headers, data=data)
     cease = time.time()

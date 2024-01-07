@@ -14,12 +14,15 @@ with open("bad-words.csv", "r") as f:
 ##############################################
 # External inputs
 ##############################################
-input_words = "I got some pairs of orange oranges for my pear. Go jump off a cliff! You beast."
+input_words = "I got some pairs of orange oranges for my pear. Go jump off a cliff! You beast. I love your shoes though!"
 processed_words = str(input_words)
 
 ##############################################
 # Regex pre-processing
 ##############################################
+padding_front = "Okay, I've got news for you buddy. "
+padding_back = " I love your shoes though!"
+
 input_words = input_words.lower()
 
 def pluralize(w):
@@ -49,7 +52,7 @@ headers = {
 
 data = {
     "model": "openorca_hacked:v0.1",
-    "prompt": processed_words,
+    "prompt": padding_front + processed_words + padding_back,
 }
 
 data = json.dumps(data)
@@ -70,6 +73,7 @@ json_version = re.sub(f"\n", "", json_version)
 js = json.loads(json_version)
 
 words = "".join(word['response'] for word in js).strip()
+words = words[len(padding_front)+3:len(words)-len(padding_back)]
 
 print("==== INPUT ============")
 print(input_words)

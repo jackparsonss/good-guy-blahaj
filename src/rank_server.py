@@ -28,8 +28,10 @@ PORT = 9032
 PORT_WEB = 9033
 
 WEB_RESPONSE = """[
-    {"original": "Base", "is_censored": false },
-    {"original": "sentence", "is_censored": false },
+    {"original": "Hello", "is_censored": false },
+    {"original": "from", "is_censored": false },
+    {"original": "good-guy", "is_censored": false },
+    {"original": "blahaj", "is_censored": false }
 ]""".encode('utf-8')
 
 headers = { "Content-Type": "application/x-www-form-urlencoded" }
@@ -239,12 +241,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                             if words_annote[i][0] == "so" or words_annote[i][0] == "as":
                                 continue
                             words_annote[i][1] = False
+                        elif re.match(r"fu*ck(ing)?", words_annote[i][0]):
+                            words_annote[i][1] = False
+
 
                 ##########################
                 # Prompting
                 ##########################
                 data = {
-                    "model": "openorca_hacked:v0.7",
+                    "model": "openorca_hacked:v0.9",
                     "prompt": og_transcribed_text,
                 }
                 data = json.dumps(data)
@@ -260,17 +265,14 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
                 max_words = get_max(ranks)
                 response = encode_to_backed(words_annote)
-                response = response.encode('utf-8')
-
-                string_annote = annotated_to_string(words_annote)
-                WEB_RESPONSE = string_annote.encode('utf-8')
+                WEB_RESPONSE = response.encode('utf-8')
 
                 print("==== INPUT =============")
                 print(og_transcribed_text)
                 print("==== REGEX =============")
-                print(string_annote)
+                print(annotated_to_string(words_annote))
                 print("==== LLAMA =============")
-                print(json_array_to_string(json.loads(response.decode('utf-8'))))
+                print(json_array_to_string(json.loads(response)))
                 print("========================")
 
                 ##########################

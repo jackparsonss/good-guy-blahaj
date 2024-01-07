@@ -5,6 +5,7 @@ import json
 import time
 import re
 import inflect
+import difflib
 import random
 
 import numpy as np
@@ -142,19 +143,20 @@ def word_starts_to_string(word_starts):
 
     return " ".join(s)
 
-def sequence_match(lhs, rhs, word_starts, word_run_idx)
+def sequence_match(lhs, rhs, word_starts, word_run_idx):
     matcher = difflib.SequenceMatcher(None, lhs, rhs)
 
     for x in matcher.get_matching_blocks()[:-1]:
         i, j, n = x
 
-        while words1[i] == " ":
+        while lhs[i] == " ":
             i += 1
             j += 1
             n -= 1
 
-        for x in range(n):
+        for x in range(n-2):
             x += i
+            print(x, len(word_run_idx), word_starts)
             index = word_run_idx[x]
 
             if index != -1:
@@ -163,7 +165,7 @@ def sequence_match(lhs, rhs, word_starts, word_run_idx)
     return word_starts
 
 
-def censor_words(audio, beep_wav, word_spans, word_starts, ratio, sample_rate):
+def censor_audio(audio, beep_wav, word_spans, word_starts, ratio, sample_rate):
     prev_rm_word_idx = -1
     audio_buffer = audio[:0]
 
@@ -203,15 +205,17 @@ def web_backend_thread():
 ############################################################
 # Main
 ############################################################
+testing_audio = None
 
 ##########################
 # Startup Constants
 ##########################
-model = whisper.load_model("large").to("cuda")
+model = whisper.load_model("base.en").to("cuda")
 inflect = inflect.engine()
 beep_sound = AudioSegment.from_wav("beep1.wav")
 
 bundle = torchaudio.pipelines.MMS_FA
+align_model = bundle.get_model(with_star=False).to("cuda")
 LABELS = bundle.get_labels(star=None)
 DICTIONARY = bundle.get_dict(star=None)
 
@@ -228,6 +232,8 @@ web_thread.start()
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
     s.listen()
+
+    print("Socket inbound!")
 
     while True:
         try:
@@ -286,7 +292,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 WEB_RESPONSE = response
 
                 print("==== INPUT =============")
-                print(transcribed_text)
+                print(og_transcribed_text)
+                print("==== REGEX =============")
+                print(processed_words)
                 print("==== LLAMA =============")
                 print(response.decode('utf-8'))
                 print("========================")
@@ -297,7 +305,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 waveform, _ = torchaudio.load(io.BytesIO(og_audio))
                 transcript = "shawty got them apple bottom jeans boots with the fur".split()
                 with torch.inference_mode():
-                    emission, _ = model(waveform.to("cuda"))
+                    emission, _ = align_model(waveform.to("cuda"))
 
                 tokenized_transcript = [DICTIONARY[c] for word in transcript for c in word]
                 aligned_tokens, alignment_scores = align(emission, tokenized_transcript)
@@ -308,7 +316,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 audio = AudioSegment.from_wav(io.BytesIO(og_audio))
 
                 new_audio = censor_audio(audio, beep_sound, word_spans, word_starts, ratio, bundle.sample_rate)
-                new_audio.export("out.wav", format="wav")
+                if testing_audio is None:
+                    testing_audio = new_audio
+                else:
+                    testing_audio += new_audio
 
                 ##########################
                 # Respond
@@ -323,3 +334,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             continue
         finally:
             conn.close()
+            testing_audio.export("out.wav", format="wav")

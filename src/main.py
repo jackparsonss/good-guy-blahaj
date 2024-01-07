@@ -7,17 +7,15 @@ import inflect
 
 inflect = inflect.engine()
 
+with open("bad-words.csv", "r") as f:
+    censor_words = [line.strip() for line in f.readlines()]
+
 
 ##############################################
 # External inputs
 ##############################################
 input_words = "I got some pairs of orange oranges for my pear. Go jump off a cliff! You beast."
 processed_words = str(input_words)
-
-censor_words = [
-    "oranges",
-    "pear",
-]
 
 ##############################################
 # Regex pre-processing
@@ -50,11 +48,9 @@ headers = {
 }
 
 data = {
-    "model": "dolphin_hacked:v0.2",
+    "model": "openorca_hacked:v0.1",
     "prompt": processed_words,
 }
-
-print(processed_words)
 
 data = json.dumps(data)
 
@@ -75,4 +71,10 @@ js = json.loads(json_version)
 
 words = "".join(word['response'] for word in js).strip()
 
+print("==== INPUT ============")
+print(input_words)
+print("==== REGEX ============")
+print(processed_words)
+print("==== LLAMA ============")
 print(words)
+print("=======================")

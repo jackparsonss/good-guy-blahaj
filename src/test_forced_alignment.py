@@ -28,6 +28,8 @@ def unflatten(list_, lengths):
         i += l
     return ret
 
+beep_sound = AudioSegment.from_wav("beep1.wav")
+
 waveform, _ = torchaudio.load("test_audio_16khz.wav")
 transcript = "shawty got them apple bottom jeans boots with the fur".split()
 bundle = torchaudio.pipelines.MMS_FA
@@ -37,27 +39,32 @@ with torch.inference_mode():
 
 LABELS = bundle.get_labels(star=None)
 DICTIONARY = bundle.get_dict(star=None)
-for k, v in DICTIONARY.items():
-    print(f"{k}: {v}")
+
 
 tokenized_transcript = [DICTIONARY[c] for word in transcript for c in word]
 aligned_tokens, alignment_scores = align(emission, tokenized_transcript)
 
 token_spans = F.merge_tokens(aligned_tokens, alignment_scores)
 word_spans = unflatten(token_spans, [len(word) for word in transcript])
-print(word_spans[0])
 
 
+#sensor the word bottoms 
 
 ratio = waveform.size(1)/emission.size(1)
 
 audio = AudioSegment.from_wav("test_audio_16khz.wav")
-for i in range(len(word_spans)):
-    start_timestamp = 1000 * int(word_spans[i][0].start * ratio) / bundle.sample_rate
-    end_timestamp = 1000 * int(word_spans[i][-1].end * ratio) / bundle.sample_rate
-    print(start_timestamp, end_timestamp)
-    new_audio = audio[start_timestamp:end_timestamp]
-    new_audio.export(f'out{i}.wav', format="wav")
+start_timestamp = 1000 * int(word_spans[4][0].start * ratio) / bundle.sample_rate
+end_timestamp = 1000 * int(word_spans[4][-1].end * ratio) / bundle.sample_rate
+new_audio = audio[:start_timestamp] + beep_sound[:(end_timestamp-start_timestamp)] + audio[end_timestamp:]
+new_audio.export("out.wav", format="wav")
+
+
+# for i in range(len(word_spans)):
+#     start_timestamp = 1000 * int(word_spans[i][0].start * ratio) / bundle.sample_rate
+#     end_timestamp = 1000 * int(word_spans[i][-1].end * ratio) / bundle.sample_rate
+#     print(start_timestamp, end_timestamp)
+#     new_audio = audio[start_timestamp:end_timestamp]
+#     new_audio.export(f'out{i}.wav', format="wav")
 
 
 

@@ -21,13 +21,16 @@ import io
 import pydub
 from pydub import AudioSegment
 
-NUM_ROUNDS = 5
+NUM_ROUNDS = 1
 
 HOST = "127.0.0.1"
 PORT = 9032
 PORT_WEB = 9033
 
-WEB_RESPONSE = "[]".encode('utf-8')
+WEB_RESPONSE = """[
+    {"original": "Base", "is_censored": false },
+    {"original": "sentence", "is_censored": false },
+]""".encode('utf-8')
 
 headers = { "Content-Type": "application/x-www-form-urlencoded" }
 
@@ -64,8 +67,8 @@ def get_max(ranks):
 def encode_to_backed(max_words):
     response = list()
 
-    for word in max_words.split():
-        response.append({ "original": word, "is_censored": random.random() < 0.3 })
+    for word in max_words:
+        response.append({ "original": word[0], "is_censored": not word[1] })
 
     return json.dumps(response)
 
@@ -156,6 +159,17 @@ def web_backend_thread():
             finally:
                 conn.close()
 
+def json_array_to_string(json_array):
+    s = list()
+
+    for word in json_array:
+        if word['is_censored']:
+            s.append("#BEEP#")
+        else:
+            s.append(word['original'])
+
+    return " ".join(s)
+
 
 ############################################################
 # Main
@@ -180,6 +194,8 @@ with open("bad-words.csv", "r") as f:
         word = line.strip()
         censor_words.append(pluralize(word)[0])
         censor_words.append(pluralize(word)[1])
+
+censor_words = [word.lower() for word in censor_words]
 
 web_thread = threading.Thread(target=web_backend_thread)
 web_thread.start()
@@ -208,6 +224,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 og_transcribed_text = re.sub("[^a-z ]", "", og_transcribed_text)
                 og_transcribed_text = " ".join(og_transcribed_text.split())
 
+                if len(og_transcribed_text) == 0:
+                    conn.sendall(struct.pack('>I', len(og_audio)) + og_audio)
+                    continue
+
                 ##########################
                 # Regex Filtering
                 ##########################
@@ -215,7 +235,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
                 for i in range(len(words_annote)):
                     for word in censor_words:
-                        if re.fullmatch(f"^{word}$", words_annote[i][0], flags=re.IGNORECASE):
+                        if word == words_annote[i][0]:
+                            if words_annote[i][0] == "so" or words_annote[i][0] == "as":
+                                continue
                             words_annote[i][1] = False
 
                 ##########################
@@ -237,17 +259,18 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         ranks[words] = 1
 
                 max_words = get_max(ranks)
-                response = encode_to_backed(max_words)
+                response = encode_to_backed(words_annote)
                 response = response.encode('utf-8')
 
-                WEB_RESPONSE = response
+                string_annote = annotated_to_string(words_annote)
+                WEB_RESPONSE = string_annote.encode('utf-8')
 
                 print("==== INPUT =============")
                 print(og_transcribed_text)
                 print("==== REGEX =============")
-                print(annotated_to_string(words_annote))
+                print(string_annote)
                 print("==== LLAMA =============")
-                print(response.decode('utf-8'))
+                print(json_array_to_string(json.loads(response.decode('utf-8'))))
                 print("========================")
 
                 ##########################

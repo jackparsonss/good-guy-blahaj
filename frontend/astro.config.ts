@@ -5,7 +5,6 @@ import tailwind from "@astrojs/tailwind";
 import sitemap from "@astrojs/sitemap";
 import remarkUnwrapImages from "remark-unwrap-images";
 import rehypeExternalLinks from "rehype-external-links";
-import { remarkReadingTime } from "./src/utils/remark-reading-time";
 
 import react from "@astrojs/react";
 
@@ -14,7 +13,7 @@ export default defineConfig({
   // ! Please remember to replace the following site property with your own domain
   site: "https://astro-cactus.chriswilliams.dev/",
   markdown: {
-    remarkPlugins: [remarkUnwrapImages, remarkReadingTime],
+    remarkPlugins: [remarkUnwrapImages],
     rehypePlugins: [[rehypeExternalLinks, {
       target: "_blank",
       rel: ["nofollow, noopener, noreferrer"]

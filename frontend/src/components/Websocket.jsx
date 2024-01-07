@@ -26,8 +26,8 @@ const Websocket = () => {
         o += el.original + " "
       })
 
-      setModified(m.trimEnd() + ".")
-      setOriginal(o.trimEnd() + ".")
+      setModified(m.trimEnd() + ".\n")
+      setOriginal(o.trimEnd() + ".\n")
     })
 
     connection.current = socket;
@@ -50,8 +50,11 @@ const Websocket = () => {
       </div>
         <div>Censor</div>
       <div className="text-lg text-white">
-        {isCensored && <TypeWriter text={modified} delay={50} />}
-        {!isCensored && <TypeWriter text={original} delay={50} />}
+        {isCensored && <div>{modified}</div>}
+        {!isCensored && <div>{original}</div>}
+
+        {/* {isCensored && <TypeWriter text={modified} delay={50} />} */}
+        {/* {!isCensored && <TypeWriter text={original} delay={50} />} */}
       </div>
     </div>
   )

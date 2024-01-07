@@ -11,7 +11,9 @@ const Typewriter = ({ text, delay }) => {
         setCurrentIndex(prevIndex => prevIndex + 1);
       }, delay);
 
-      return () => clearTimeout(timeout);
+      return () => {
+        clearTimeout(timeout);
+      }
     }
   }, [currentIndex, delay, text]);
 

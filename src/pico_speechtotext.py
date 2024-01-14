@@ -11,7 +11,7 @@ if mic_idx is None:
     raise ValueError("mic not found")
 
 data_queue = queue.Queue()
-handle = pvcheetah.create('/nCImyVsH/buJnRhmuRCLa/w6XZVm5AFKhgbb/wVq3YK27ByiHGgcg==', endpoint_duration_sec=0.5)
+handle = pvcheetah.create('', endpoint_duration_sec=0.5)
 recorder = pvrecorder.PvRecorder(frame_length=handle.frame_length, device_index=mic_idx)
 recorder.start()
 print("Starting!")
